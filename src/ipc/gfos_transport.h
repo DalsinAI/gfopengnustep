@@ -14,6 +14,7 @@ typedef struct GFOSPort {
     struct MsgPort *execPort;
     char *name;
     int publicPort;
+    ULONG outgoing; /* messages sent via this reply port awaiting delivery */
 } GFOSPort;
 
 typedef struct GFOSMessage {
@@ -28,9 +29,9 @@ typedef struct GFOSMessage {
 
 /* All functions return 0 for success, nonzero for failure. */
 int gfos_port_create(GFOSPort *out, const char *publicName);
-void gfos_port_close(GFOSPort *port);
+int gfos_port_close(GFOSPort *port); /* refuses closure if outgoing != 0 */
 GFOSMessage *gfos_message_alloc(ULONG payloadBytes, ULONG requestId);
-void gfos_message_free(GFOSMessage *message);
+int gfos_message_free(GFOSMessage *message); /* refuses in-flight messages */
 int gfos_port_send(const char *destinationName, GFOSPort *replyTo,
                    GFOSMessage *message);
 GFOSMessage *gfos_port_receive(GFOSPort *port);

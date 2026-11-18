@@ -48,21 +48,24 @@ int gfos_port_create(GFOSPort *out, const char *publicName)
 /* Close is only legal once the application has stopped new dispatch and
  * all request ownership/replies are complete. It returns no success flag;
  * production NSMessagePort will add in-flight lifetime accounting. */
-void gfos_port_close(GFOSPort *port)
+int gfos_port_close(GFOSPort *port)
 {
     struct Message *item;
-    if (!port || !port->execPort) return;
+    if (!port || !port->execPort) return -1;
+    if (port->outgoing) return -2;
     if (port->publicPort) {
         Forbid();
         RemPort(port->execPort);
         Permit();
     }
     while ((item = GetMsg(port->execPort)) != NULL) {
-        if (item->mn_ReplyPort) ReplyMsg(item);
+        /* Private reply queues must never bounce an acknowledgement again. */
+        if (port->publicPort && item->mn_ReplyPort) ReplyMsg(item);
     }
     DeleteMsgPort(port->execPort);
     if (port->name) FreeVec(port->name);
     memset(port, 0, sizeof(*port));
+    return 0;
 }
 
 GFOSMessage *gfos_message_alloc(ULONG payloadBytes, ULONG requestId)
@@ -80,9 +83,12 @@ GFOSMessage *gfos_message_alloc(ULONG payloadBytes, ULONG requestId)
     return message;
 }
 
-void gfos_message_free(GFOSMessage *message)
+int gfos_message_free(GFOSMessage *message)
 {
-    if (message) FreeVec(message);
+    if (!message) return -1;
+    if (message->state == 1) return -2;
+    FreeVec(message);
+    return 0;
 }
 
 int gfos_port_send(const char *destinationName, GFOSPort *replyTo,
@@ -100,6 +106,7 @@ int gfos_port_send(const char *destinationName, GFOSPort *replyTo,
     dest = FindPort(destinationName);
     if (dest) {
         message->state = 1;
+        replyTo->outgoing++;
         PutMsg(dest, &message->execMessage);
     } else {
         message->execMessage.mn_ReplyPort = NULL;
@@ -137,6 +144,9 @@ void gfos_message_reply(GFOSMessage *message, ULONG status)
 GFOSMessage *gfos_port_poll_reply(GFOSPort *port)
 {
     GFOSMessage *message = gfos_port_receive(port);
-    if (message) message->state = 2;
+    if (message) {
+        message->state = 2;
+        if (port->outgoing) port->outgoing--;
+    }
     return message;
 }

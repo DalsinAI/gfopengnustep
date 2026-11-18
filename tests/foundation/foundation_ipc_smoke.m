@@ -2,6 +2,7 @@
  * Built and linked on daletop; guest execution is a separate gate.
  */
 #import <Foundation/NSAutoreleasePool.h>
+#import <Foundation/NSProcessInfo.h>
 #import <Foundation/NSData.h>
 #import <Foundation/NSDate.h>
 #import <Foundation/NSArray.h>
@@ -11,8 +12,10 @@
 #include <string.h>
 #include <stdio.h>
 
-int main(void)
+int main(int argc, char **argv)
 {
+    char *gfos_environment[] = { NULL };
+    GSInitializeProcess(argc, argv, gfos_environment);
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSMessagePort *listener = [[NSMessagePort alloc] init];
     NSMessagePort *replies = [[NSMessagePort alloc] init];

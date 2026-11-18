@@ -16,6 +16,8 @@ int main(void)
     memcpy(message->payload, "hello-gfos!", 12);
     if (gfos_port_send(server.name,&replies,message)) { gfos_message_free(message); goto finish; }
     if (gfos_port_send(server.name,&replies,message) == 0) goto finish; /* no double queue */
+    if (gfos_message_free(message) == 0) goto finish; /* cannot free in flight */
+    if (gfos_port_close(&replies) == 0) goto finish; /* cannot drop reply port */
     request = gfos_port_receive(&server);
     if (!request || request != message || request->requestId != 17 ||
         memcmp(request->payload,"hello-gfos!",12)) {
@@ -30,7 +32,8 @@ int main(void)
         if (response) gfos_message_free(response);
         goto finish;
     }
-    gfos_message_free(response);
+    if (gfos_message_free(response)) goto finish;
+    if (replies.outgoing != 0) goto finish;
     puts("GFOS_TRANSPORT_ROUNDTRIP_PASS");
     rc = 0;
 finish:

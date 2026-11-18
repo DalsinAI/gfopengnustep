@@ -14,6 +14,7 @@ int main(void)
     message = gfos_message_alloc(12, 17);
     if (!message) goto finish;
     memcpy(message->payload, "hello-gfos!", 12);
+    if (gfos_port_name_exists("GFOS.FOUNDATION.TRANSPORT.TEST") != 1) goto finish;
     if (gfos_port_send(server.name,&replies,message)) { gfos_message_free(message); goto finish; }
     if (gfos_port_send(server.name,&replies,message) == 0) goto finish; /* no double queue */
     if (gfos_message_free(message) == 0) goto finish; /* cannot free in flight */
@@ -34,6 +35,9 @@ int main(void)
     }
     if (gfos_message_free(response)) goto finish;
     if (replies.outgoing != 0) goto finish;
+    if (gfos_port_unpublish(&server)) goto finish;
+    if (gfos_port_name_exists("GFOS.FOUNDATION.TRANSPORT.TEST")) goto finish;
+    if (gfos_port_publish(&server, "GFOS.FOUNDATION.TRANSPORT.TEST")) goto finish;
     puts("GFOS_TRANSPORT_ROUNDTRIP_PASS");
     rc = 0;
 finish:

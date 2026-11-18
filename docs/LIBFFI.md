@@ -1,0 +1,5 @@
+# GFOS native libffi 3.8.1 port
+
+Upstream: https://github.com/libffi/libffi tag v3.8.1 (`a09b362a01e17842184732223184253986c2cc4e`). Apply `patches/libffi/0001-m68k-amiga-exec-cacheclear-aout.patch` to that upstream tree (with `patch -p1`), run `./autogen.sh`, and configure for `--host=m68k-amigaos --build=x86_64-pc-linux-gnu --disable-shared --enable-static` using our OpenAmigaGCC 16 m68k-amigaos compiler, linker and archive tools. Include GFOpenNDK headers (`CPATH=/path/to/ndk-include.vendor`), then `make -j4 && make install` to an isolated target prefix. The patch replaces Linux cacheflush syscalls with native Exec `CacheClearE` and aligns assembly symbols with AmigaOS a.out.
+
+`tests/ffi_smoke.c` uses real `ffi_prep_cif`/`ffi_call` integer and double calls. Expected guest output: `GFOS_FFI_PASS int=20 double=4.375`. It **cross-compiled and linked**, but has NOT been run in a GFOS guest. Confirm on real AmigaOS 3.2.3/AROS as applicable, and add a trampoline/closure invocation test before claiming full libffi qualification. This build is a dependency for GNUstep Base `NSInvocation`, not a finished Foundation port.

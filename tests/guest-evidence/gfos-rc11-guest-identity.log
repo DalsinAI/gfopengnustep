@@ -1,0 +1,16 @@
+GFOS_GUEST_ID_BEGIN
+Kickstart 47.2, Workbench 47.100
+GFOS_GUEST_VERSION_RC 0
+
+Mounted disks:
+Unit      Size       Used       Free Full Errs   Status   Name
+DF0       No disk present
+DH0       985G     245776 2065799597   0%   0  Read/Write System
+MEDIA       0K          0          0   0%   0  Read Only  
+RAM       499M        288     510818   0%   0  Read/Write RAM Disk
+
+Volumes available:
+RAM Disk [Mounted]
+System [Mounted]
+GFOS_GUEST_INFO_RC 0
+GFOS_GUEST_ID_END

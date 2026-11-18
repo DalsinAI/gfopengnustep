@@ -1,0 +1,11 @@
+GFOS_RC1_FOUNDATION_BEGIN
+
+GNUSTEP Internal Error:
+The GNUstep function to establish the argv and environment variables could
+not find the main function of your program.
+Perhaps your program failed to #include <Foundation/NSObject.h> or
+<Foundation/Foundation.h> (or included/imported a different version of the
+header from the one supplied with this copy of the gnustep-base library)?
+If that is not the case, Please report the error to bug-gnustep@gnu.org.
+GFOS_RC1_FOUNDATION_RC 1
+GFOS_RC1_FOUNDATION_END

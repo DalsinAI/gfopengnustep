@@ -1,0 +1,109 @@
+--- a/Source/GSArray.m
++++ b/Source/GSArray.m
+@@ -58,7 +58,8 @@
+  */
+ #if	!GNUSTEP_WITH_ASAN
+ static Class	GSInlineArrayClass;
+-#if defined(__WIN32)
++#if defined(__WIN32) || defined(__amigaos__)
++/* a.out cannot use the host LeakSanitizer weak-hook probing mechanism. */
+ static int (*lsanCheck)(void) = NULL;	// No weak symbol support :-(
+ #else
+ /* For runtime detection of LSAN, we use a weak symbol for one of its
+--- a/Source/NSData.m
++++ b/Source/NSData.m
+@@ -2016,7 +2016,13 @@
+        */
+       mask = umask(0);
+       umask(mask);
++#if defined(__amigaos__)
++      /* libnix has chmod(path), but no fchmod(fd). The temporary name
++       * already exists; permissions remain subject to filesystem support. */
++      (void)chmod(thePath, 0666 & ~mask);
++#else
+       fchmod(desc, 0666 & ~mask);
++#endif
+       if ((theFile = fdopen(desc, "w")) == 0)
+ 	{
+ 	  close(desc);
+--- a/Source/NSPage.m
++++ b/Source/NSPage.m
+@@ -34,6 +34,15 @@
+ #include <malloc.h>
+ #endif
+ 
++#ifdef __amigaos__
++#include <stdlib.h>
++#include <stdint.h>
++/* GFOS compatibility allocation granule. NOT an MMU page-size claim.
++ * Real MMU and physical memory mapping require a separate native API. */
++static size_t gfos_getpagesize(void) { return 4096; }
++#define getpagesize gfos_getpagesize
++#endif
++
+ #ifdef _WIN32
+ #include <malloc.h>
+ static size_t
+@@ -167,6 +176,18 @@
+   if (r != KERN_SUCCESS)
+     return NULL;
+   return where;
++#elif defined(__amigaos__)
++  /* Overallocate and remember the actual malloc pointer immediately ahead
++   * of the aligned pointer, so NSDeallocateMemoryPages can free it safely. */
++  size_t align = NSPageSize();
++  void *base;
++  if (size > SIZE_MAX - align - sizeof(void*)) return NULL;
++  base = malloc(size + align - 1 + sizeof(void*));
++  uintptr_t aligned;
++  if (!base) return NULL;
++  aligned = ((uintptr_t)base + sizeof(void*) + align - 1) & ~(uintptr_t)(align - 1);
++  where = (void*)aligned;
++  ((void**)where)[-1] = base;
+ #elif	HAVE_POSIX_MEMALIGN
+   if (posix_memalign(&where, NSPageSize(), size) != 0)
+     return NULL;
+@@ -192,6 +213,8 @@
+   VirtualFree(ptr, 0, MEM_RELEASE);
+ #elif __mach__
+   vm_deallocate (mach_task_self (), ptr, NSRoundUpToMultipleOfPageSize (bytes));
++#elif defined(__amigaos__)
++  if (ptr) free(((void**)ptr)[-1]);
+ #else
+   free (ptr);
+ #endif
+--- a/Source/GSFileHandle.m
++++ b/Source/GSFileHandle.m
+@@ -1785,7 +1785,12 @@
+ {
+   if (isStandardFile)
+     {
++#if defined(__amigaos__)
++      /* libnix fsync() flushes this file, unlike Unix-wide sync(). */
++      if (descriptor >= 0) (void)fsync(descriptor);
++#else
+       (void)sync();
++#endif
+     }
+ }
+ 
+--- a/Source/GNUmakefile
++++ b/Source/GNUmakefile
+@@ -377,10 +377,13 @@
+ ifneq ($(GNUSTEP_TARGET_OS), mingw32)
+   ifneq ($(GNUSTEP_TARGET_OS), mingw64)
+     ifneq ($(GNUSTEP_TARGET_OS), windows)
+-      BASE_MFILES += \
+-	GSFileHandle.m \
+-	NSMessagePort.m \
+-	NSMessagePortNameServer.m
++      BASE_MFILES += GSFileHandle.m
++      # GFOS foundational collections build lane only: Unix-domain socket
++      # NSMessagePort is not executable on AmigaOS. Reintroduce when the real
++      # Exec-backed NSPort/NSRunLoop implementation is qualified.
++      ifneq ($(GFOS_FOUNDATION_CORE_ONLY),yes)
++        BASE_MFILES += NSMessagePort.m NSMessagePortNameServer.m
++      endif
+     endif
+   endif
+ endif

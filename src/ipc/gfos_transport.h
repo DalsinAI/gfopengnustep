@@ -29,6 +29,9 @@ typedef struct GFOSMessage {
 
 /* All functions return 0 for success, nonzero for failure. */
 int gfos_port_create(GFOSPort *out, const char *publicName);
+int gfos_port_publish(GFOSPort *port, const char *publicName);
+int gfos_port_unpublish(GFOSPort *port);
+int gfos_port_name_exists(const char *publicName);
 int gfos_port_close(GFOSPort *port); /* refuses closure if outgoing != 0 */
 GFOSMessage *gfos_message_alloc(ULONG payloadBytes, ULONG requestId);
 int gfos_message_free(GFOSMessage *message); /* refuses in-flight messages */

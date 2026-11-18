@@ -29,7 +29,12 @@ static NSMutableDictionary *gfosLocalNames;
 + (id)sharedInstance
 {
     [gfosRegistrationLock lock];
-    if (!gfosSharedServer) gfosSharedServer = [self new];
+    if (!gfosSharedServer) {
+        /* NSPortNameServer intentionally forbids ordinary +alloc/+new.
+         * Match GNUstep's original singleton construction strategy. */
+        gfosSharedServer = (NSMessagePortNameServer *)
+            NSAllocateObject(self, 0, NSDefaultMallocZone());
+    }
     [gfosRegistrationLock unlock];
     return gfosSharedServer;
 }

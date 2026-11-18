@@ -17,3 +17,17 @@ The existing AmigaOS NDK provides `CreateMsgPort`, `DeleteMsgPort`, `AddPort`, `
 Do not promote the single-task compile probe to a production transport. Existing [GFOpenMulticore](https://github.com/DalsinAI/gfopenmulticore) may provide scheduling assistance, but the actual Exec IPC ownership needs runtime testing first.
 
 The current GNUstep Base source build stops in `NSMessagePortNameServer.m` because of AF_UNIX/PF_UNIX assumptions, after 241 native AmigaOS object modules had already been built. The existing Foundation symbols cannot be declared complete until this is integrated and tested.
+
+## First reusable transport implementation (new)
+
+`src/ipc/gfos_transport.{h,c}` now implements a **native static GFOS transport**, `libgfosfoundationipc.a`, with:
+
+- Named public port registration and collision protection under `Forbid/Permit`, plus an unnamed private reply-port option
+- Bounded (32 KiB) public-memory envelopes that respect Exec's 16-bit `mn_Length` with a magic/version field, request ID, status, payload length and send state
+- Race-safe lookup + `PutMsg` under the same `Forbid/Permit` critical section; never waits with multitasking disabled
+- Nonblocking receive/reply queue polling and `ReplyMsg` handback; the sending task owns its allocated envelope until a reply arrives
+- Duplicate-send refusal on already-sent envelopes, and a single-process roundtrip self-test checking payload integrity, request ID and status
+
+`Makefile` builds `libgfosfoundationipc.a` and a native `gfos_transport_selftest_68040` along with the earlier libffi and Exec probes. The cross-build and native link both passed with OpenAmigaGCC16 and no compiler diagnostics. The produced files have been verified to be AmigaOS object/library data and loadseg executable format. **Guest execution is still outstanding.**
+
+Important: this is an **IPC substrate**, not yet a GNUstep `NSMessagePort` subclass or a completed Foundation run-loop integration. Production integration must address concurrent receive/close, dead-client handling, reply port lifetime, timer-based cancellation without use-after-free, message dispatch and cross-task/multicore tests. Until those semantics are proven, do not mark the Foundation IPC gate closed or publish RC.

@@ -48,6 +48,56 @@ int gfos_port_create(GFOSPort *out, const char *publicName)
 /* Close is only legal once the application has stopped new dispatch and
  * all request ownership/replies are complete. It returns no success flag;
  * production NSMessagePort will add in-flight lifetime accounting. */
+int gfos_port_publish(GFOSPort *port, const char *publicName)
+{
+    char *name;
+    ULONG n;
+    if (!port || !port->execPort || port->publicPort || !publicName)
+        return -1;
+    n = (ULONG)strlen(publicName);
+    if (!n || n > 128) return -2;
+    name = (char *)AllocVec(n + 1, MEMF_PUBLIC);
+    if (!name) return -3;
+    memcpy(name, publicName, n + 1);
+    Forbid();
+    if (FindPort(name)) {
+        Permit();
+        FreeVec(name);
+        return -4;
+    }
+    port->execPort->mp_Node.ln_Name = name;
+    AddPort(port->execPort);
+    port->name = name;
+    port->publicPort = 1;
+    Permit();
+    return 0;
+}
+
+int gfos_port_unpublish(GFOSPort *port)
+{
+    char *name;
+    if (!port || !port->execPort || !port->publicPort) return -1;
+    Forbid();
+    RemPort(port->execPort);
+    name = port->name;
+    port->execPort->mp_Node.ln_Name = NULL;
+    port->name = NULL;
+    port->publicPort = 0;
+    Permit();
+    if (name) FreeVec(name);
+    return 0;
+}
+
+int gfos_port_name_exists(const char *publicName)
+{
+    int exists;
+    if (!publicName) return 0;
+    Forbid();
+    exists = FindPort(publicName) != NULL;
+    Permit();
+    return exists;
+}
+
 int gfos_port_close(GFOSPort *port)
 {
     struct Message *item;

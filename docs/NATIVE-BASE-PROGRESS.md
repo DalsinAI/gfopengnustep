@@ -39,3 +39,7 @@ Make invocation: `make CC=<m68k-amigaos-gcc> OBJC=<m68k-amigaos-gcc> CXX=<m68k-a
 4. Restore iconv/Unicode, XML and TLS capabilities through GFOS/OpenUp facilities; evaluate AROS and 68060 builds; integrate real Oolite source.
 
 Gating issue: https://github.com/DalsinAI/gfopengnustep/issues/1 . GNUstep Base subproject https://github.com/DalsinAI/gfopenfoundation .
+
+## Exec semaphore and ARexx design extension
+
+The GNUstep messaging system is documented explicitly in `docs/GNUSTEP-AMIGA-MESSAGING.md`: Exec message ports back `NSMessagePort`, Exec `SignalSemaphore` helps back Foundation synchronisation, and ARexx is an optional application command gateway requiring correct `RexxMsg` protocol handling. A native static `libgfosfoundationsync.a`, single-task semaphore self-test executable and `GFOSFoundationLock.o` bridge cross-compile successfully for GCC16 m68k. None has yet been guest-run, and this does not remove the `NSRunLoop`/full GNUstep Base linker blocker.

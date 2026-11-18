@@ -1,11 +1,14 @@
 #import <Foundation/NSObject.h>
 #import <Foundation/NSAutoreleasePool.h>
+#import <Foundation/NSProcessInfo.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSArray.h>
 #import <Foundation/NSDictionary.h>
 #import <stdio.h>
-int main(void)
+int main(int argc, char **argv)
 {
+    char *gfos_environment[] = { NULL };
+    GSInitializeProcess(argc, argv, gfos_environment);
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSString *name = [NSString stringWithUTF8String:"GFOS"];
     NSArray *items = [NSArray arrayWithObject:name];

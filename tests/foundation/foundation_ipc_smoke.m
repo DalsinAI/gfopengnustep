@@ -26,9 +26,18 @@ int main(int argc, char **argv)
     BOOL ok = [names registerPort:listener forName:name];
     if (!ok) goto cleanup;
     if (![names portForName:name]) { ok = NO; goto cleanup; }
-    ok = [listener sendBeforeDate:[NSDate dateWithTimeIntervalSinceNow:5]
+    /* Construct Foundation arguments before messaging. In the 68040 guest
+     * this also makes the ABI/dispatch path independently testable. */
+    NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5];
+    NSMutableArray *parts = [NSMutableArray arrayWithObject:payload];
+    if (!deadline || [parts count] != 1 ||
+        ![listener respondsToSelector:@selector(sendBeforeDate:msgid:components:from:reserved:)]) {
+        ok = NO;
+        goto cleanup;
+    }
+    ok = [listener sendBeforeDate:deadline
                            msgid:77
-                      components:[NSMutableArray arrayWithObject:payload]
+                      components:parts
                             from:replies
                         reserved:0];
     if (!ok) goto cleanup;

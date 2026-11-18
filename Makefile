@@ -10,7 +10,7 @@ TARGET_CFLAGS := -std=gnu11 -O2 -m68040 -m68881 -noixemul
 
 .PHONY: all native-probes clean
 all: native-probes
-native-probes: $(OUT)/ffi_smoke_68040 $(OUT)/gfos_exec_port_probe_68040 $(OUT)/gfos_transport_selftest_68040
+native-probes: $(OUT)/ffi_smoke_68040 $(OUT)/gfos_exec_port_probe_68040 $(OUT)/gfos_transport_selftest_68040 $(OUT)/gfos_sync_selftest_68040
 
 $(OUT)/ffi_smoke_68040: tests/ffi_smoke.c
 	@mkdir -p $(OUT)
@@ -31,6 +31,17 @@ $(OUT)/gfos_transport_selftest_68040: tests/ipc/gfos_transport_selftest.c $(OUT)
 	@mkdir -p $(OUT)
 	$(CC) $(TARGET_CFLAGS) -Wall -Wextra -I $(NDK_INCLUDE) -I src/ipc $< $(OUT)/libgfosfoundationipc.a -o $@
 
+$(OUT)/gfos_sync.o: src/sync/gfos_sync.c src/sync/gfos_sync.h
+	@mkdir -p $(OUT)
+	$(CC) $(TARGET_CFLAGS) -Wall -Wextra -I $(NDK_INCLUDE) -I src/sync -c $< -o $@
+
+$(OUT)/libgfosfoundationsync.a: $(OUT)/gfos_sync.o
+	$(SDK_PREFIX)/bin/m68k-amigaos-ar rcs $@ $<
+
+$(OUT)/gfos_sync_selftest_68040: tests/sync/gfos_sync_selftest.c $(OUT)/libgfosfoundationsync.a
+	@mkdir -p $(OUT)
+	$(CC) $(TARGET_CFLAGS) -Wall -Wextra -I $(NDK_INCLUDE) -I src/sync $< $(OUT)/libgfosfoundationsync.a -o $@
+
 # Bridge is an Objective-C source object, not a linked Foundation executable.
 # Compile only after applying the native GNUstep Base patches and configure.
 GNUSTEP_BASE_DIR ?= ../gnustep-base
@@ -38,8 +49,12 @@ $(OUT)/GFOSFoundationEndpoint.o: src/foundation/GFOSFoundationEndpoint.m src/fou
 	@mkdir -p $(OUT)
 	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(GNUSTEP_BASE_DIR)/Source -I $(NDK_INCLUDE) -I src/ipc -I src/foundation -c $< -o $@
 
+$(OUT)/GFOSFoundationLock.o: src/sync/GFOSFoundationLock.m src/sync/GFOSFoundationLock.h src/sync/gfos_sync.h
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(NDK_INCLUDE) -I src/sync -c $< -o $@
+
 .PHONY: foundation-bridge
-foundation-bridge: $(OUT)/GFOSFoundationEndpoint.o
+foundation-bridge: $(OUT)/GFOSFoundationEndpoint.o $(OUT)/GFOSFoundationLock.o
 
 clean:
 	rm -rf $(OUT)

@@ -53,6 +53,50 @@ $(OUT)/GFOSFoundationLock.o: src/sync/GFOSFoundationLock.m src/sync/GFOSFoundati
 	@mkdir -p $(OUT)
 	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(NDK_INCLUDE) -I src/sync -c $< -o $@
 
+$(OUT)/GFOSNSMessagePort.o: src/foundation/GFOSNSMessagePort.m src/foundation/GFOSNSMessagePort.h src/ipc/gfos_transport.h
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(NDK_INCLUDE) -I src/ipc -I src/foundation -c $< -o $@
+
+$(OUT)/GFOSNSMessagePortNameServer.o: src/foundation/GFOSNSMessagePortNameServer.m src/foundation/GFOSNSMessagePort.h src/ipc/gfos_transport.h
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(NDK_INCLUDE) -I src/ipc -I src/foundation -c $< -o $@
+
+$(OUT)/libgfosfoundationports.a: $(OUT)/GFOSNSMessagePort.o $(OUT)/GFOSNSMessagePortNameServer.o
+	$(SDK_PREFIX)/bin/m68k-amigaos-ar rcs $@ $^
+
+.PHONY: foundation-ports
+foundation-ports: $(OUT)/libgfosfoundationports.a
+
+# Diagnostic link of GNUstep Base core-only archive plus real GFOS local
+# NSMessagePort classes. These link tests must be executed on the guest
+# before they qualify as passed runtime tests.
+GFOS_BASE_CORE_ARCHIVE ?= $(GNUSTEP_BASE_DIR)/Source/obj/libgnustep-base.a
+GFOS_DEPS_LIB ?= $(SDK_PREFIX)/m68k-amigaos/port-deps/lib
+GFOS_LIBNIX_LIB ?= $(SDK_PREFIX)/m68k-amigaos/libnix/lib
+
+$(OUT)/foundation_smoke.o: tests/foundation/foundation_smoke.m
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(GNUSTEP_BASE_DIR)/Source -I $(NDK_INCLUDE) -c $< -o $@
+
+$(OUT)/foundation_ipc_smoke.o: tests/foundation/foundation_ipc_smoke.m src/foundation/GFOSNSMessagePort.h
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I src/foundation -I $(NDK_INCLUDE) -c $< -o $@
+
+$(OUT)/foundation_smoke_68040: $(OUT)/foundation_smoke.o $(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a
+	$(CC) -m68040 -m68881 -noixemul $< -L $(GFOS_DEPS_LIB) -L $(GFOS_LIBNIX_LIB) \
+	-Wl,--start-group -Wl,--whole-archive $(GFOS_BASE_CORE_ARCHIVE) -Wl,--no-whole-archive \
+	$(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a $(FFI_PREFIX)/lib/libffi.a \
+	-lobjc -lpthread -lm -lz -lsocket -Wl,--end-group -o $@
+
+$(OUT)/foundation_ipc_smoke_68040: $(OUT)/foundation_ipc_smoke.o $(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a
+	$(CC) -m68040 -m68881 -noixemul $< -L $(GFOS_DEPS_LIB) -L $(GFOS_LIBNIX_LIB) \
+	-Wl,--start-group -Wl,--whole-archive $(GFOS_BASE_CORE_ARCHIVE) -Wl,--no-whole-archive \
+	$(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a $(FFI_PREFIX)/lib/libffi.a \
+	-lobjc -lpthread -lm -lz -lsocket -Wl,--end-group -o $@
+
+.PHONY: foundation-core-link
+foundation-core-link: $(OUT)/foundation_smoke_68040 $(OUT)/foundation_ipc_smoke_68040
+
 .PHONY: foundation-bridge
 foundation-bridge: $(OUT)/GFOSFoundationEndpoint.o $(OUT)/GFOSFoundationLock.o
 

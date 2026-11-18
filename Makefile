@@ -31,5 +31,15 @@ $(OUT)/gfos_transport_selftest_68040: tests/ipc/gfos_transport_selftest.c $(OUT)
 	@mkdir -p $(OUT)
 	$(CC) $(TARGET_CFLAGS) -Wall -Wextra -I $(NDK_INCLUDE) -I src/ipc $< $(OUT)/libgfosfoundationipc.a -o $@
 
+# Bridge is an Objective-C source object, not a linked Foundation executable.
+# Compile only after applying the native GNUstep Base patches and configure.
+GNUSTEP_BASE_DIR ?= ../gnustep-base
+$(OUT)/GFOSFoundationEndpoint.o: src/foundation/GFOSFoundationEndpoint.m src/foundation/GFOSFoundationEndpoint.h src/ipc/gfos_transport.h
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -I $(GNUSTEP_BASE_DIR)/Source -I $(NDK_INCLUDE) -I src/ipc -I src/foundation -c $< -o $@
+
+.PHONY: foundation-bridge
+foundation-bridge: $(OUT)/GFOSFoundationEndpoint.o
+
 clean:
 	rm -rf $(OUT)

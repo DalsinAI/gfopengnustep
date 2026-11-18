@@ -7,12 +7,12 @@
 | Upstream component | GFOS target | Priority / state |
 | --- | --- | --- |
 | GNUstep Make (`gnustep/tools-make`) | Cross-build host tools + AmigaOS-target build rules; native install/packaging paths | Host make 2.9.3 configured, built and installed locally on daletop |
-| GNUstep Base (`gnustep/libs-base`) | Foundation classes, initially `libgnustep-base.a`, later stable `foundation.library` if practical | 1.31.1 cross-configures in exploration mode; native library does **not** yet build |
+| GNUstep Base (`gnustep/libs-base`) | Foundation classes, initially `libgnustep-base.a`, later stable `foundation.library` if practical | 1.31.1 cross-configures and 241 native AmigaOS object files compile; full archive still blocked on native Foundation messaging / remaining integration |
 | GNU Objective-C runtime | Existing GCC 16 `libobjc.a` | Present; Objective-C test class cross-compiled; GNUstep ABI/header adaptation needed |
 | POSIX C/runtime | Existing repaired [GFOpenGCC libnix](https://github.com/DalsinAI/gfopengcc/tree/main/patches/libnix) | Existing 11 upstream patch fixes; must not reimplement |
 | Threads and events | Existing pthreads / OpenMulticore / Exec | Target `libpthread.a` and headers exist; guest concurrency tests required |
 | Foundation character conversion | GFOpenUnicode / GFOpenBrowser ICU or a native iconv bridge | **Missing from this build**, required for complete functionality |
-| Foundation method invocation | native libffi (or reviewed equivalent) with correct GCC libobjc callbacks | **Missing from this build**, required for NSInvocation/NSUndoManager/DO |
+| Foundation method invocation | Native GFOS-patched libffi 3.8.1 | **Cross-built and links into 68040 test executable**; method invocation and closure runtime guest tests still outstanding |
 | Plists, XML, TLS | OpenXML, OpenTLS/OpenCrypto, GFOS services | Integration to be designed and verified; exploratory configure disabled XML/TLS |
 | GNUstep GUI | OpenGadTools / OpenRTG / OpenGPU / OpenFont bridges | After Base. Avoid X11, cairo/pixman, a duplicate desktop compositor |
 | GNUstep Back | Native GFOS backend to Intuition/OpenGadTools/OpenRTG/OpenGPU | After GUI; not yet started |
@@ -28,6 +28,12 @@ Pinned releases: `gnustep/tools-make` **make-2_9_3**, tag SHA `9f277f8f9eb04c77d
 - First `make` used the host GNUstep-make default `gcc`, failing at missing host Objective-C compiler (`cc1obj`). Retrying with explicit GCC16 cross `CC`, `CXX` and `OBJC` exposed **real ABI/target issues**: legacy ObjectiveC2 GNUstep compatibility layer includes removed `objc/objc-api.h`; GNUStep's generated ObjectiveC2 runtime symbols/properties conflict with the GCC16 `objc/runtime.h`; generated code also uses `@GOT(a4)` relocations unsupported by the chosen m68k-amigaos assembler/linker path. No native Foundation archive yet.
 
 See [docs/BUILD-GATES.md](docs/BUILD-GATES.md) for the precise stop points and next fixes. **Never describe a successful configure as a successful build or guest test.**
+
+## Native AmigaOS messaging and synchronisation
+
+The [GFOS-native GNUstep messaging architecture](docs/GNUSTEP-AMIGA-MESSAGING.md) is now documented and has initial buildable components. Foundation `NSMessagePort` uses **Exec message ports** as its intended transport; `NSLock`/`NSRecursiveLock` integration uses **Exec SignalSemaphore** and existing pthread/OpenMulticore; **ARexx** is a separate optional command bridge, not a replacement for message payloads. Native source builds now include `libgfosfoundationipc.a`, `libgfosfoundationsync.a`, an `NSData` receive adapter, a semaphore adapter and 68040 smoke-test executables. Full Foundation IPC event-loop integration, guest tests and RC remain pending.
+
+See [IPC implementation and limitations](docs/IPC-GFOS.md), [native GNUstep Base build receipts](docs/NATIVE-BASE-PROGRESS.md) and [libffi port instructions](docs/LIBFFI.md).
 
 ## GFOS integration rules
 

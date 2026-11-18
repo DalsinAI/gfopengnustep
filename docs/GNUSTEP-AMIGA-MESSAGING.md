@@ -71,3 +71,7 @@ We now cross-build the following pieces:
 2. Qualify concurrency, in-flight close/cancel, port registration collision, memory release, task termination and timeouts under actual AmigaOS; verify the lock interfaces' semantic equivalence.
 3. Finish building and linking real native `libgnustep-base.a`; restore required Unicode, XML, TLS; test Oolite Foundation API use.
 4. Run on AmigaOS 3.2.3, AROS where applicable, and qualify 68040/68060. Package SDK, headers, examples, licences, logs and release artifact. Optional ARexx gateway is **not required** for first Base RC unless explicitly designated.
+
+## Guest qualification update: 18 November 2026
+
+Actual AmigaChrome guest execution now confirms the C Exec port, semaphore and transport tests all return PASS with exit code 0, plus a corrected native libffi floating-point call test and GNUstep Foundation strings/collections smoke. The full Objective-C `NSMessagePort` test remains **failed/hung**, even though native port creation, name-server creation, registration and lookup have been traced in guest. The singleton was corrected to use `NSAllocateObject()` rather than forbidden `[self new]`. See [RC1 Guest Results](RC1-GUEST-RESULTS.md) for unambiguous original-RC-versus-rebuilt test versions, raw evidence and remaining gate. `NSRunLoop` and thread safety are not qualified.

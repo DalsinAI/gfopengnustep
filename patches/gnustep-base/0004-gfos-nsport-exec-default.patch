@@ -1,0 +1,21 @@
+--- a/Source/NSPort.m
++++ b/Source/NSPort.m
+@@ -72,12 +72,18 @@
+       NSPort_abstract_class = self;
+       NSPort_concrete_class = [NSMessagePort class];
+ 
++#if !defined(__amigaos__)
++      /* GFOS only provides native Exec message ports. Avoid querying
++       * user defaults from the Objective-C class initialization path. */
+       defs = [NSUserDefaults standardUserDefaults];
+       if ([defs objectForKey: @"NSPortIsMessagePort"] != nil
+ 	&& [defs boolForKey: @"NSPortIsMessagePort"] == NO)
+ 	{
+ 	  NSPort_concrete_class = [NSSocketPort class];
+ 	}
++#else
++      (void)defs;
++#endif
+     }
+ }
+ 

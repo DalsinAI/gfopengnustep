@@ -1,0 +1,38 @@
+--- a/src/m68k/ffi.c
++++ b/src/m68k/ffi.c
+@@ -9,7 +9,10 @@
+ 
+ #include <stdlib.h>
+ #include <unistd.h>
+-#ifdef __rtems__
++#if defined(__amigaos__)
++#include <exec/execbase.h>
++#include <proto/exec.h>
++#elif defined(__rtems__)
+ void rtems_cache_flush_multiple_data_lines( const void *, size_t );
+ #else
+ #include <sys/syscall.h>
+@@ -345,7 +348,10 @@
+   else
+     *(void **)(closure->tramp + 8) = ffi_closure_SYSV;
+ 
+-#ifdef __rtems__
++#if defined(__amigaos__)
++  /* AmigaOS Exec cache synchronisation for generated closure trampolines. */
++  CacheClearE(codeloc, FFI_TRAMPOLINE_SIZE, CACRF_ClearI | CACRF_ClearD);
++#elif defined(__rtems__)
+   rtems_cache_flush_multiple_data_lines( codeloc, FFI_TRAMPOLINE_SIZE );
+ #elif defined(__MINT__)
+   Ssystem(S_FLUSHCACHE, codeloc, FFI_TRAMPOLINE_SIZE);
+--- a/src/m68k/sysv.S
++++ b/src/m68k/sysv.S
+@@ -44,7 +44,8 @@
+ #define CFI_ENDPROC()
+ #endif
+ 
+-#ifdef __MINT__
++#if defined(__MINT__) || defined(__amigaos__)
++/* AmigaOS a.out target prefixes C symbols with underscore. */
+ #define CALLFUNC(funcname) _ ## funcname
+ #else
+ #define CALLFUNC(funcname) funcname

@@ -94,8 +94,18 @@ $(OUT)/foundation_ipc_smoke_68040: $(OUT)/foundation_ipc_smoke.o $(OUT)/libgfosf
 	$(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a $(FFI_PREFIX)/lib/libffi.a \
 	-lobjc -lpthread -lm -lz -lsocket -Wl,--end-group -o $@
 
+$(OUT)/foundation_date_probe.o: tests/foundation/foundation_date_probe.m
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -I $(GNUSTEP_BASE_DIR)/Headers -c $< -o $@
+
+$(OUT)/foundation_date_probe_68040: $(OUT)/foundation_date_probe.o $(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a
+	$(CC) -m68040 -m68881 -noixemul $< -L $(GFOS_DEPS_LIB) -L $(GFOS_LIBNIX_LIB) \
+	-Wl,--start-group -Wl,--whole-archive $(GFOS_BASE_CORE_ARCHIVE) -Wl,--no-whole-archive \
+	$(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a $(FFI_PREFIX)/lib/libffi.a \
+	-lobjc -lpthread -lm -lz -lsocket -Wl,--end-group -o $@
+
 .PHONY: foundation-core-link
-foundation-core-link: $(OUT)/foundation_smoke_68040 $(OUT)/foundation_ipc_smoke_68040
+foundation-core-link: $(OUT)/foundation_smoke_68040 $(OUT)/foundation_ipc_smoke_68040 $(OUT)/foundation_date_probe_68040
 
 .PHONY: foundation-bridge
 foundation-bridge: $(OUT)/GFOSFoundationEndpoint.o $(OUT)/GFOSFoundationLock.o

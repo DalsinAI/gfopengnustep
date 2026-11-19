@@ -1,0 +1,21 @@
+GFOS_FM_FIXED_GUEST_BEGIN
+GFOS_FM before-manager
+GFOS_FM after-manager
+GFOS_FM standardized=SYS:ACAgent/gfos-fm-dir-plain
+GFOS_FM before-plain
+GFOS_FM_INTERNAL create-enter
+GFOS_FM_INTERNAL mkdir-result=1 errno=0
+GFOS_FM_INTERNAL attrs-count=0
+GFOS_FM_INTERNAL change-attrs-result=1
+GFOS_FM plain-created=1
+GFOS_FM before-perms
+GFOS_FM_INTERNAL create-enter
+GFOS_FM_INTERNAL mkdir-result=1 errno=0
+GFOS_FM_INTERNAL attrs-count=1
+GFOS_FM_INTERNAL change-attrs-result=1
+GFOS_FM perms-created=1
+GFOS_FM plain-exists=1
+GFOS_FM perms-exists=1
+GFOS_FM end
+GFOS_FM_FIXED_GUEST_RC 0
+GFOS_FM_FIXED_GUEST_END

@@ -1,0 +1,100 @@
+--- a/Source/NSFileManager.m
++++ b/Source/NSFileManager.m
+@@ -1144,6 +1144,7 @@
+       isDir = (CreateDirectoryW(lpath, 0) != FALSE) ? YES : NO;
+ #else
+       isDir = (mkdir(lpath, 0777) == 0) ? YES : NO;
++#if !defined(__amigaos__)
+       if (YES == isDir)
+         {
+           /*
+@@ -1170,6 +1171,7 @@
+                 }
+             }
+         }
++#endif /* !__amigaos__: do not synthesize Unix owner attributes */
+ #endif
+       if (NO == isDir)
+         {
+--- a/Source/NSDistributedLock.m
++++ b/Source/NSDistributedLock.m
+@@ -173,6 +173,7 @@
+       DESTROY(self);
+       return nil;
+     }
++#if !defined(__amigaos__)
+   if ([mgr isWritableFileAtPath: lockDir] == NO)
+     {
+       NSLog(@"parent directory of lock file '%@' is not writable\n", _lockPath);
+@@ -186,6 +187,7 @@
+       DESTROY(self);
+       return nil;
+     }
++#endif /* Native AmigaDOS protection is enforced by create/delete. */
+   return self;
+ }
+ 
+--- a/Source/NSUserDefaults.m
++++ b/Source/NSUserDefaults.m
+@@ -345,7 +345,10 @@
+ 	}
+       else
+ 	{
++#if !defined(__amigaos__)
++	  /* POSIX owner/mode rewriting is not the AmigaDOS protection model. */
+ 	  setPermissions(file);
++#endif
+ 	  return YES;
+ 	}
+     }
+@@ -716,7 +719,13 @@
+       [self registerAtExit];
+ 
+       processName = [[[NSProcessInfo processInfo] processName] copy];
++#if defined(__amigaos__)
++      /* Native GFOS: this private lookup recursively initializes NSBundle
++       * before standard defaults exist. Process name is already available. */
++      key = nil;
++#else
+       key = [GSPrivateInfoDictionary(nil) objectForKey: @"CFBundleIdentifier"];
++#endif
+       if (NO == [key isKindOfClass: [NSString class]])
+ 	{
+ 	  /* No bundle identifier found: use the process name instead.
+@@ -1076,6 +1085,13 @@
+        * Look up user languages list and insert language specific domains
+        * into search list before NSRegistrationDomain
+        */
++#if defined(__amigaos__)
++      /* Complete bootstrap without locale search paths, whose Foundation
++       * configuration and file lookup can recurse into standard defaults. */
++      [defs registerDefaults: [self _unlocalizedDefaults]];
++      updateCache(sharedDefaults);
++      [defs->_lock unlock];
++#else
+       uL = [defs stringArrayForKey: @"NSLanguages"];
+       nL = newLanguages(uL);
+       if (NO == [uL isEqual: nL])
+@@ -1226,6 +1242,7 @@
+         }
+       updateCache(sharedDefaults);
+       [defs->_lock unlock];
++#endif
+     }
+   NS_HANDLER
+     {
+@@ -1348,8 +1365,14 @@
+ {
+   NSString	*path;
+ 
++#if defined(__amigaos__)
++  /* Native AmigaDOS defaults directory; GNUstep path discovery needs
++   * standard defaults itself and reenters initialisation on GFOS. */
++  path = @"SYS:Prefs/Env-Archive/GNUstep/.GNUstepDefaults";
++#else
+   path = [GSDefaultsRootForUser(userName)
+     stringByAppendingPathComponent: defaultsFile];
++#endif
+   return [self initWithContentsOfFile: path];
+ }
+ 

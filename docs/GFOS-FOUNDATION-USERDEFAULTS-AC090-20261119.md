@@ -28,3 +28,14 @@ Apply the patch to the pinned GNUstep Base source using `patch -p1`; replay was 
 ## Remaining release gates
 
 This qualifies the bootstrap and basic single-application durable preferences round trip on **one AC090 68040 isolated guest**; it does not validate multi-process concurrent lock contention, stale lock recovery, permissions/hardening, language/locale preference domains, alternate AmigaDOS volumes or AROS, or all Foundation APIs. It is not evidence the whole original Oolite game reaches its title screen: the existing Oolite executable still stalls in `MyOpenGLView -init` and must be relinked with patched GNUstep Base for a valid retest. No general GFOS UAT or Oolite RC1 release should be declared from this probe alone.
+
+## Additional isolated guest regression (verified after initial patch publication)
+
+The published GNUstep private archive was relinked into three existing Foundation 68040 tests, rather than using old guest binaries. Each was executed in the same independent AmigaOS 3.2.3 AC090 guest:
+- `foundation_smoke-patched-defaults-68040`: `FOUNDATION_CORE_PASS len=4 items=1 dict=1`, RC0
+- `foundation_date_probe-patched-defaults-68040`: `DATE_PROBE_PASS`, RC0
+- `foundation_ipc_smoke-patched-defaults-68040`: `GFOS_FOUNDATION_IPC_PASS`, RC0
+
+`tests/evidence/gfos-foundation-patch0005-regression-3of3-68040-guest-pass.log` records all three in one ordered ACAgent command. This is a regression smoke gate, not comprehensive thread/contention/locale qualification.
+
+The reproducible `make native-defaults-68040` target was subsequently added to GFOpenGNUstep Makefile. It applies patch 0005 to **private source copies**, assembles a private archive with original Base `.a` preserved, links an original GNUstep Base program, and the resulting guest executable passed `NSUserDefaults` set/get/save with `synchronize=1`, RC0; evidence `tests/evidence/defaults-make-target-68040-guest-pass.log`.

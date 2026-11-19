@@ -112,3 +112,47 @@ foundation-bridge: $(OUT)/GFOSFoundationEndpoint.o $(OUT)/GFOSFoundationLock.o
 
 clean:
 	rm -rf $(OUT)
+
+# Standalone native GFOS defaults qualification; never patches GNUstep's
+# source tree or its original static archive. This target is opt-in, not part
+# of the existing full Foundation smoke gate. A real guest must run the result.
+GFOS_DEFAULTS_PATCH ?= patches/gnustep-base/0005-gfos-native-userdefaults-filesystem-bootstrap.patch
+GFOS_DEFAULTS_SRC_DIR := $(OUT)/native-defaults-replay
+GFOS_DEFAULTS_ARCHIVE := $(OUT)/libgnustep-base-gfos-defaults.a
+GFOS_DEFAULTS_OBJS := $(addprefix $(GFOS_DEFAULTS_SRC_DIR)/,$(addsuffix .m.o,NSUserDefaults NSFileManager NSDistributedLock))
+.PHONY: native-defaults-patched-archive native-defaults-68040
+native-defaults-patched-archive: $(GFOS_DEFAULTS_ARCHIVE)
+native-defaults-68040: $(OUT)/gfos_defaults_native_68040
+
+$(GFOS_DEFAULTS_SRC_DIR)/.patch-applied: $(GFOS_DEFAULTS_PATCH)
+	@mkdir -p $(GFOS_DEFAULTS_SRC_DIR)/Source
+	@for name in NSUserDefaults NSFileManager NSDistributedLock; do cp $(GNUSTEP_BASE_DIR)/Source/$$name.m $(GFOS_DEFAULTS_SRC_DIR)/Source/$$name.m; done
+	@cd $(GFOS_DEFAULTS_SRC_DIR) && patch -s -p1 < $(abspath $(GFOS_DEFAULTS_PATCH))
+	@touch $@
+
+$(GFOS_DEFAULTS_SRC_DIR)/%.m.o: $(GFOS_DEFAULTS_SRC_DIR)/.patch-applied
+	$(CC) -x objective-c $(TARGET_CFLAGS) -fobjc-exceptions -Wno-error=incompatible-pointer-types \
+	  -DGNUSTEP_BASE_LIBRARY=1 -I $(GNUSTEP_BASE_DIR)/Source -I $(GNUSTEP_BASE_DIR)/Headers \
+	  -I $(NDK_INCLUDE) -I $(SDK_PREFIX)/m68k-amigaos/include \
+	  -I $(SDK_PREFIX)/m68k-amigaos/port-deps/include \
+	  -c $(GFOS_DEFAULTS_SRC_DIR)/Source/$*.m -o $@
+
+$(GFOS_DEFAULTS_ARCHIVE): $(GFOS_DEFAULTS_OBJS)
+	@cp $(GFOS_BASE_CORE_ARCHIVE) $@
+	@for name in NSUserDefaults NSFileManager NSDistributedLock; do \
+	  cp $(GFOS_DEFAULTS_SRC_DIR)/$$name.m.o $(OUT)/$$name.m.o; \
+	  $(SDK_PREFIX)/bin/m68k-amigaos-ar r $@ $(OUT)/$$name.m.o || exit 1; \
+	  rm -f $(OUT)/$$name.m.o; \
+	done
+	$(SDK_PREFIX)/bin/m68k-amigaos-ranlib $@
+
+$(OUT)/gfos_defaults_native_68040.o: tests/foundation/gfos_defaults_native_68040.m
+	@mkdir -p $(OUT)
+	$(CC) -x objective-c $(TARGET_CFLAGS) -fobjc-exceptions \
+	  -I $(GNUSTEP_BASE_DIR)/Headers -I $(GNUSTEP_BASE_DIR)/Source -I $(NDK_INCLUDE) -c $< -o $@
+
+$(OUT)/gfos_defaults_native_68040: $(OUT)/gfos_defaults_native_68040.o $(GFOS_DEFAULTS_ARCHIVE) $(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a
+	$(CC) -m68040 -m68881 -noixemul $< -L $(GFOS_DEPS_LIB) -L $(GFOS_LIBNIX_LIB) \
+	  -Wl,--start-group -Wl,--whole-archive $(GFOS_DEFAULTS_ARCHIVE) -Wl,--no-whole-archive \
+	  $(OUT)/libgfosfoundationports.a $(OUT)/libgfosfoundationipc.a $(FFI_PREFIX)/lib/libffi.a \
+	  -lobjc -lpthread -lm -lz -lsocket -Wl,--end-group -o $@

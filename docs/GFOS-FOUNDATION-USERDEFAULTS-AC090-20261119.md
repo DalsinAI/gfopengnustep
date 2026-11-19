@@ -39,3 +39,11 @@ The published GNUstep private archive was relinked into three existing Foundatio
 `tests/evidence/gfos-foundation-patch0005-regression-3of3-68040-guest-pass.log` records all three in one ordered ACAgent command. This is a regression smoke gate, not comprehensive thread/contention/locale qualification.
 
 The reproducible `make native-defaults-68040` target was subsequently added to GFOpenGNUstep Makefile. It applies patch 0005 to **private source copies**, assembles a private archive with original Base `.a` preserved, links an original GNUstep Base program, and the resulting guest executable passed `NSUserDefaults` set/get/save with `synchronize=1`, RC0; evidence `tests/evidence/defaults-make-target-68040-guest-pass.log`.
+
+## Repeat-save and stale-lock qualification (strict gate)
+
+The initial probe's `synchronize=1` output was not enforced as a failure condition. The test source was strengthened: `synchronize=NO` is exit code 5, and an independent `VERIFY` mode reads `GFOSProbeRoundTrip` without writing; mismatch is exit code 4. The native Makefile target was rebuilt using this strict source.
+
+A repeated save encountered a pre-existing `SYS:Prefs/Env-Archive/GNUstep/.lck/.gnustepdefaults.lck` directory from a previously interrupted guest run and could not complete. Its log is preserved privately in the persistent DevDrive workspace. The stale lock was archived and removed with the guest's own AmigaDOS `Delete` command (guest RC0); host-side deletion was not needed. The strict save then completed with `synchronize=1`, exit code 0, and the separate `VERIFY` invocation read `roundtrip-68040-uat2` from disk, `verified=1`, RC0. Logs `defaults-strict-after-native-unlock-guest-pass.log` and `defaults-strict-verify-guest-pass.log` are native evidence.
+
+**Known limitation:** automatic recovery of interrupted/stale GNUstep directory locks is not yet qualified; the historic `NSUserDefaults` lock retries can wait an extended period. Never assume safe crash recovery or use this as a complete Foundation UAT release gate. This is a pass for fresh-lock native durable settings and an explicit manual recovery procedure on an isolated clone only.

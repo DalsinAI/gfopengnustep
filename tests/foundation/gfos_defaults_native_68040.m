@@ -11,11 +11,16 @@ int main(int argc,char **argv){
  if (!d) return 2;
  NSString *v=[d stringForKey:@"GFOSProbeRoundTrip"];
  printf("GFOS_DEFAULTS_RW before=%s\n",v?[v UTF8String]:"nil");fflush(stdout);
- checkpoint("before-write");[d setObject:@"roundtrip-68040" forKey:@"GFOSProbeRoundTrip"]; checkpoint("after-write");
+ if (argc>1 && argv[1][0]=='V') {
+   BOOL verified=[v isEqualToString:@"roundtrip-68040-uat2"];
+   printf("GFOS_DEFAULTS_RW verified=%d\n",verified);fflush(stdout);
+   [pool drain];return verified?0:4;
+ }
+ checkpoint("before-write");[d setObject:@"roundtrip-68040-uat2" forKey:@"GFOSProbeRoundTrip"]; checkpoint("after-write");
  v=[d stringForKey:@"GFOSProbeRoundTrip"];
  printf("GFOS_DEFAULTS_RW after=%s\n",v?[v UTF8String]:"nil");fflush(stdout);
- if (![v isEqualToString:@"roundtrip-68040"]) return 3;
+ if (![v isEqualToString:@"roundtrip-68040-uat2"]) return 3;
  checkpoint("before-sync"); BOOL saved=[d synchronize];checkpoint("after-sync");
  printf("GFOS_DEFAULTS_RW synchronize=%d\n",saved);fflush(stdout);
- [pool drain];checkpoint("end");return 0;
+ [pool drain];checkpoint("end");return saved?0:5;
 }
